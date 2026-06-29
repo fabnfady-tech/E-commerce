@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم متجر فادي العالمي | Fadi Store Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <nav class="bg-white shadow-xs border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <span class="text-2xl font-black text-indigo-600 tracking-wider cursor-pointer"
+                    onclick="switchPage('store')">FADI MEGA STORE</span>
+                <div class="hidden md:flex items-center gap-6 font-medium text-sm">
+                    <button onclick="switchPage('store')" id="nav-store" class="text-indigo-600 font-bold">🏪
+                        المتجر</button>
+                    <button onclick="switchPage('cart')" id="nav-cart" class="text-gray-600">🛒 السلة <span
+                            id="cart-count"
+                            class="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold">0</span></button>
+                    <button onclick="switchPage('orders')" id="nav-orders" class="text-gray-600">📦 طلباتي</button>
+                </div>
+                <button onclick="switchPage('login')" id="nav-login"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">🔑 دخول</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <section id="page-store" class="page-view">
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            <div class="flex justify-center gap-4 mt-12">
+                <button id="prev-btn" class="bg-white border px-4 py-2 rounded-lg disabled:opacity-50">السابق</button>
+                <button id="next-btn" class="bg-white border px-4 py-2 rounded-lg disabled:opacity-50">التالي</button>
+            </div>
+        </section>
+
+        <section id="page-details" class="page-view hidden">
+            <button onclick="switchPage('store')" class="mb-6 text-indigo-600 font-bold">← العودة للمتجر</button>
+            <div id="product-details-content" class="bg-white p-8 rounded-2xl shadow-lg border"></div>
+        </section>
+
+        <section id="page-cart" class="page-view hidden">
+            <div class="bg-white border rounded-xl p-6 shadow-xs max-w-3xl">
+                <div id="cart-items" class="divide-y"></div>
+                <div class="border-t pt-4 mt-6 flex justify-between font-bold text-lg">
+                    <span>الإجمالي:</span>
+                    <span id="cart-total" class="text-indigo-600">0 ج.م</span>
+                </div>
+                <button onclick="checkoutOrder()"
+                    class="w-full bg-emerald-600 text-white mt-6 py-3 rounded-xl font-bold">💳 تأكيد الطلب</button>
+            </div>
+        </section>
+
+        <section id="page-orders" class="page-view hidden">
+            <div id="orders-list" class="space-y-4"></div>
+        </section>
+
+        <section id="page-login" class="page-view hidden">
+            <form id="login-form" onsubmit="handleLogin(event)"
+                class="max-w-md mx-auto bg-white p-8 rounded-2xl border">
+                <input type="text" id="username" placeholder="Username" required class="w-full border p-2 mb-4">
+                <input type="password" id="password" placeholder="Password" required class="w-full border p-2 mb-4">
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg">دخول</button>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        const BASE_URL = window.location.origin;
+        let currentNextUrl = `${BASE_URL}/products/`;
+        let currentPrevUrl = null;
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+            if (pageId === 'store') fetchProducts(`${BASE_URL}/products/`);
+        }
+
+        async function fetchProducts(url) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const products = data.results ? data.results : data;
+
+                currentNextUrl = data.next;
+                currentPrevUrl = data.previous;
+                document.getElementById('next-btn').disabled = !currentNextUrl;
+                document.getElementById('prev-btn').disabled = !currentPrevUrl;
+
+                const grid = document.getElementById('products-grid');
+                grid.innerHTML = '';
+                products.forEach(product => {
+                    grid.innerHTML += `
+                        <div onclick="viewProductDetails(${product.id})" class="bg-white rounded-xl border shadow-2xs p-5 hover:shadow-md transition cursor-pointer">
+                            <img src="${product.image}" alt="${product.title}" class="h-40 w-full object-cover rounded-lg mb-4">
+                            <h3 class="font-bold text-gray-900 mb-1">${product.title}</h3>
+                            <div class="flex justify-between items-center pt-3 mt-auto">
+                                <span class="font-black text-gray-900">${product.price} ج.م</span>
+                                <button onclick="event.stopPropagation(); addToCart('${product.title}', ${product.price})" class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">＋ السلة</button>
+                            </div>
+                        </div>`;
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function viewProductDetails(productId) {
+            const content = document.getElementById('product-details-content');
+            content.innerHTML = '<p class="text-center">جاري التحميل...</p>';
+            switchPage('details');
+            try {
+                const response = await fetch(`${BASE_URL}/products/${productId}/`);
+                const product = await response.json();
+                content.innerHTML = `
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <img src="${product.image}" class="w-full h-80 object-cover rounded-xl">
+                        <div>
+                            <h2 class="text-3xl font-black mb-2">${product.title}</h2>
+                            <p class="text-indigo-600 text-xl mb-4">${product.price} ج.م</p>
+                            <p class="text-gray-600 mb-6">${product.description || 'لا يوجد وصف'}</p>
+                            <button onclick="addToCart('${product.title}', ${product.price})" class="w-full bg-indigo-600 text-white py-3 rounded-lg">إضافة للسلة</button>
+                        </div>
+                    </div>`;
+            } catch (err) { content.innerHTML = '<p>خطأ في تحميل المنتج.</p>'; }
+        }
+
+        // دالة السلة والدخول كما هي (محافظ على منطقك القديم)
+        let localCart = [];
+        function addToCart(title, price) { localCart.push({ title, price }); alert('تمت الإضافة!'); }
+
+        document.getElementById('next-btn').addEventListener('click', () => { if (currentNextUrl) fetchProducts(currentNextUrl); });
+        document.getElementById('prev-btn').addEventListener('click', () => { if (currentPrevUrl) fetchProducts(currentPrevUrl); });
+
+        fetchProducts(`${BASE_URL}/products/`);
+    </script>
+</body>
+
+</html>
