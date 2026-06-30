@@ -73,11 +73,30 @@
         const BASE_URL = window.location.origin;
         let currentNextUrl = `${BASE_URL}/products/`;
         let currentPrevUrl = null;
+        let localCart = [];
 
         function switchPage(pageId) {
             document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
             document.getElementById(`page-${pageId}`).classList.remove('hidden');
+
             if (pageId === 'store') fetchProducts(`${BASE_URL}/products/`);
+
+            if (pageId === 'cart') {
+                const cartContainer = document.getElementById('cart-items');
+                const totalElement = document.getElementById('cart-total');
+                cartContainer.innerHTML = '';
+                let total = 0;
+
+                localCart.forEach(item => {
+                    total += parseFloat(item.price);
+                    cartContainer.innerHTML += `
+                        <div class="py-3 flex justify-between">
+                            <span>${item.title}</span>
+                            <span class="font-bold">${item.price} ج.م</span>
+                        </div>`;
+                });
+                totalElement.innerText = `${total} ج.م`;
+            }
         }
 
         async function fetchProducts(url) {
@@ -121,15 +140,21 @@
                             <h2 class="text-3xl font-black mb-2">${product.title}</h2>
                             <p class="text-indigo-600 text-xl mb-4">${product.price} ج.م</p>
                             <p class="text-gray-600 mb-6">${product.description || 'لا يوجد وصف'}</p>
-                            <button onclick="addToCart('${product.title}', ${product.price})" class="w-full bg-indigo-600 text-white py-3 rounded-lg">إضافة للسلة</button>
+                            <button onclick="addToCart('${product.title}', ${product.price})" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">
+                                ＋ إضافة للسلة
+                            </button>
                         </div>
                     </div>`;
             } catch (err) { content.innerHTML = '<p>خطأ في تحميل المنتج.</p>'; }
         }
 
-        // دالة السلة والدخول كما هي (محافظ على منطقك القديم)
-        let localCart = [];
-        function addToCart(title, price) { localCart.push({ title, price }); alert('تمت الإضافة!'); }
+        function addToCart(title, price) {
+            localCart.push({ title, price });
+            document.getElementById('cart-count').innerText = localCart.length;
+            alert('تمت الإضافة للسلة!');
+        }
+
+        function checkoutOrder() { alert('تم تأكيد الطلب!'); localCart = []; switchPage('store'); }
 
         document.getElementById('next-btn').addEventListener('click', () => { if (currentNextUrl) fetchProducts(currentNextUrl); });
         document.getElementById('prev-btn').addEventListener('click', () => { if (currentPrevUrl) fetchProducts(currentPrevUrl); });
