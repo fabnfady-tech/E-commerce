@@ -3,6 +3,7 @@ from django.urls import path, include
 from project import settings
 from store.views import home_dashboard
 from django.conf.urls.static import static
+from store.views import home_dashboard, register_view 
 # 🌟 استيراد مسارات الـ JWT الجديدة للـ Login وتجديد التوكن
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -11,6 +12,7 @@ urlpatterns = [
     path('', home_dashboard, name='home'),
     path('', include('store.urls')),
     path('api-auth/', include('rest_framework.urls')),
+    path('api/register/', register_view, name='register'),
     
     # 🔐 روابط الـ JWT الاحترافية
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
